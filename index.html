@@ -1,0 +1,249 @@
+<html>
+    <head>
+        <title>Snake</title>
+
+        <script src="lib/phaser.min.js"></script>
+    </head>
+    <body>
+        <script type="text/javascript">
+            const config = {
+                type: Phaser.AUTO,
+                width: 800,
+                height: 600,
+                physics: {
+                    default: 'arcade',
+                    arcade: { }
+                },
+                scene: {
+                    preload, create, update
+                }
+            };
+
+            const game = new Phaser.Game(config);
+
+            const Dir = {
+                UP: 0,
+                LEFT: 1,
+                DOWN: 2,
+                RIGHT: 3
+            };
+            const BlockType = {
+                SNAKE: 0xC9FFE6,
+                APPLE: 0xFF0000
+            };
+            const shiftX = {
+                [Dir.UP]: 0,
+                [Dir.LEFT]: -1,
+                [Dir.DOWN]: 0,
+                [Dir.RIGHT]: 1
+            };
+            const shiftY = {
+                [Dir.UP]: -1,
+                [Dir.LEFT]: 0,
+                [Dir.DOWN]: 1,
+                [Dir.RIGHT]: 0
+            };
+            const BLOCK_SIZE = 20;
+            let field = [];
+            let snake = [];
+            let apple = null;
+            let grab = false;
+            let inputLock = false;
+            let dir = Dir.RIGHT;
+            let score = 0;
+            let bestScore = 0;
+            let scoreLabel = null;
+            let gameLoop = null;
+            let isGameOver = true;
+            let win = false;
+
+            function preload() {
+
+            }
+
+            function create() {
+
+                for (let x = BLOCK_SIZE/2; x < 800; x+= BLOCK_SIZE) {
+                    for (let y = BLOCK_SIZE/2; y < 600; y+= BLOCK_SIZE) {
+                        field.push({x, y});
+                    }
+                }
+
+                scoreLabel = this.add.text(25, 25, '', { color: '#FFFFFF', fontSize: 24 }).setDepth(400);
+                gameOverLabel = this.add.text(200, 32, 'Press <Space> to start',
+                                              { 
+                                                  color: '#FFFFFF', 
+                                                  fontSize: 36, 
+                                                  align: 'center' 
+                                              }).setDepth(400);
+
+                initGame(this);
+
+                this.input.keyboard.on('keydown', e => {
+                    if (inputLock || win) {
+                        return;
+                    }
+
+                    if (e.keyCode == Phaser.Input.Keyboard.KeyCodes.SPACE) {
+                        gameLoop.paused = !gameLoop.paused;
+                        if (isGameOver) {
+                            isGameOver = false;
+                            gameOverLabel.setText(['GAME OVER', 'Press <Space> to retry']);
+                        }
+                    }
+
+                    if (gameLoop.paused) {
+                        return;
+                    }
+
+                    if ([Phaser.Input.Keyboard.KeyCodes.UP,
+                         Phaser.Input.Keyboard.KeyCodes.W].includes(e.keyCode) && dir !== Dir.DOWN) {
+                        dir = Dir.UP;
+                    } else if ([Phaser.Input.Keyboard.KeyCodes.LEFT,
+                                Phaser.Input.Keyboard.KeyCodes.A].includes(e.keyCode) && dir !== Dir.RIGHT) {
+                        dir = Dir.LEFT;
+                    } else if ([Phaser.Input.Keyboard.KeyCodes.DOWN,
+                                Phaser.Input.Keyboard.KeyCodes.S].includes(e.keyCode) && dir !== Dir.UP) {
+                        dir = Dir.DOWN;
+                    } else if ([Phaser.Input.Keyboard.KeyCodes.RIGHT,
+                                Phaser.Input.Keyboard.KeyCodes.D].includes(e.keyCode) && dir !== Dir.LEFT) {
+                        dir = Dir.RIGHT;
+                    }
+                    inputLock = true;
+                });
+            }
+
+            function initGame(scene) {
+                score = 0;
+                inputLock = false;
+
+                snake.forEach(s => s.destroy());
+                snake = [];
+
+                if (apple !== null) {
+                    apple.destroy();
+                    apple = null;
+                }
+
+                createBlock(scene, BLOCK_SIZE*2.5, 600-BLOCK_SIZE*5.5, BlockType.SNAKE);
+                createBlock(scene, BLOCK_SIZE*3.5, 600-BLOCK_SIZE*5.5, BlockType.SNAKE);
+                createBlock(scene, BLOCK_SIZE*4.5, 600-BLOCK_SIZE*5.5, BlockType.SNAKE);
+                dir = Dir.RIGHT;
+
+                createApple(scene);
+
+                initGameLoop(scene, 120);
+            }
+
+            function initGameLoop(scene, delay) {
+                if (gameLoop !== null) {
+                    gameLoop.destroy();
+                    gameLoop = null;
+                }
+
+                gameLoop = scene.time.addEvent({
+                    delay,
+                    loop: true,
+                    paused: true,
+                    callbackScope: scene,
+                    callback: function() {
+                        const head = snake[snake.length-1];
+                        if (snake.some(s => head !== s && head.x == s.x && head.y === s.y)) {
+                            gameOver();
+                            initGame(this);
+                            return;
+                        }
+                        if (!grab) {
+                            removeTail();
+                        }
+                        grab = false;
+                        let nx = head.x + BLOCK_SIZE * shiftX[dir];
+                        if (nx < 0) { nx = 800 - BLOCK_SIZE/2; }
+                        else if (nx > 800) { nx = BLOCK_SIZE/2; }
+
+                        let ny = head.y + BLOCK_SIZE * shiftY[dir];
+                        if (ny < 0) { ny = 600 - BLOCK_SIZE/2; }
+                        else if (ny > 600) { ny = BLOCK_SIZE/2; }
+
+                        createBlock(this, 
+                                    nx, 
+                                    ny, 
+                                    BlockType.SNAKE);
+                        if (!win) {
+                            checkApple(this);
+                            inputLock = false;
+                        }
+                    }
+                });
+            }
+
+            function createBlock(scene, x, y, blockType) {
+                const block = scene.add.rectangle(x, y, BLOCK_SIZE, BLOCK_SIZE, blockType);
+                block.setStrokeStyle(3, 0x000000);
+                if (blockType == BlockType.SNAKE) {
+                    snake.push(block);
+                    field = field.filter(f => f.x !== block.x || f.y !== block.y);
+                    if (field.length == 0) {
+                        gameLoop.destroy();
+                        snake.forEach(s => s.destroy());
+                        scoreLabel.destroy();
+                        scene.game.stage.backgroundColor = '#48CE92';
+                        win = true;
+                        return;
+                    }
+                    if (snake.length >= 2) {
+                        snake[snake.length-2].setFillStyle(0x48CE92);
+                    }
+                }
+                return block;
+            }
+
+            function removeTail() {
+                const tail = snake[0];
+                field.push({x: tail.x, y: tail.y});
+                tail.destroy();
+                snake = snake.splice(1, snake.length-1);
+            }
+
+            function findEmpty() {
+                return field[Math.floor(Math.random() * field.length)];
+            }
+
+            function createApple(scene) {
+                const applePos = findEmpty();
+                apple = createBlock(scene, applePos.x, applePos.y, BlockType.APPLE);
+            }
+
+            function checkApple(scene) {
+                const head = snake[snake.length-1];
+                if (head.x === apple.x && head.y === apple.y) {
+                    apple.destroy();
+                    createApple(scene);
+                    score += 5;
+                    grab = true;
+                    if (score % 100 === 0 && gameLoop.delay > 40) {
+                        initGameLoop(scene, gameLoop.delay-20);
+                    }
+
+                }
+            }
+
+            function update() {
+                scoreLabel.setText([
+                    'Score: ' + score,
+                    'Best: ' + bestScore
+
+                ]);
+                gameOverLabel.setVisible(isGameOver);
+            }
+
+            function gameOver() {
+                isGameOver = true;
+                gameLoop.paused = true;
+                if (bestScore < score) {
+                    bestScore = score;
+                }
+            }
+        </script>
+    </body>
+</html>
