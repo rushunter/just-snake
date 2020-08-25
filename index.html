@@ -133,6 +133,7 @@
                 createApple(scene);
 
                 initGameLoop(scene, 120);
+                gameLoop.paused = true;
             }
 
             function initGameLoop(scene, delay) {
@@ -144,7 +145,6 @@
                 gameLoop = scene.time.addEvent({
                     delay,
                     loop: true,
-                    paused: true,
                     callbackScope: scene,
                     callback: function() {
                         const head = snake[snake.length-1];
