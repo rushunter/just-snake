@@ -6,10 +6,13 @@
     </head>
     <body>
         <script type="text/javascript">
+            const SCREEN_WIDTH = 800;
+            const SCREEN_HEIGHT = 600;
+
             const config = {
                 type: Phaser.AUTO,
-                width: 800,
-                height: 600,
+                width: SCREEN_WIDTH,
+                height: SCREEN_HEIGHT,
                 physics: {
                     default: 'arcade',
                     arcade: { }
@@ -20,6 +23,8 @@
             };
 
             const game = new Phaser.Game(config);
+
+            const Key = Phaser.Input.Keyboard.KeyCodes;
 
             const Dir = {
                 UP: 0,
@@ -63,8 +68,8 @@
 
             function create() {
 
-                for (let x = BLOCK_SIZE/2; x < 800; x+= BLOCK_SIZE) {
-                    for (let y = BLOCK_SIZE/2; y < 600; y+= BLOCK_SIZE) {
+                for (let x = BLOCK_SIZE/2; x < SCREEN_WIDTH; x+= BLOCK_SIZE) {
+                    for (let y = BLOCK_SIZE/2; y < SCREEN_HEIGHT; y+= BLOCK_SIZE) {
                         field.push({x, y});
                     }
                 }
@@ -84,7 +89,7 @@
                         return;
                     }
 
-                    if (e.keyCode == Phaser.Input.Keyboard.KeyCodes.SPACE) {
+                    if (e.keyCode == Key.SPACE) {
                         gameLoop.paused = !gameLoop.paused;
                         if (isGameOver) {
                             isGameOver = false;
@@ -96,17 +101,13 @@
                         return;
                     }
 
-                    if ([Phaser.Input.Keyboard.KeyCodes.UP,
-                         Phaser.Input.Keyboard.KeyCodes.W].includes(e.keyCode) && dir !== Dir.DOWN) {
+                    if ([Key.UP, Key.W].includes(e.keyCode) && dir !== Dir.DOWN) {
                         dir = Dir.UP;
-                    } else if ([Phaser.Input.Keyboard.KeyCodes.LEFT,
-                                Phaser.Input.Keyboard.KeyCodes.A].includes(e.keyCode) && dir !== Dir.RIGHT) {
+                    } else if ([Key.LEFT, Key.A].includes(e.keyCode) && dir !== Dir.RIGHT) {
                         dir = Dir.LEFT;
-                    } else if ([Phaser.Input.Keyboard.KeyCodes.DOWN,
-                                Phaser.Input.Keyboard.KeyCodes.S].includes(e.keyCode) && dir !== Dir.UP) {
+                    } else if ([Key.DOWN, Key.S].includes(e.keyCode) && dir !== Dir.UP) {
                         dir = Dir.DOWN;
-                    } else if ([Phaser.Input.Keyboard.KeyCodes.RIGHT,
-                                Phaser.Input.Keyboard.KeyCodes.D].includes(e.keyCode) && dir !== Dir.LEFT) {
+                    } else if ([Key.RIGHT, Key.D].includes(e.keyCode) && dir !== Dir.LEFT) {
                         dir = Dir.RIGHT;
                     }
                     inputLock = true;
@@ -158,12 +159,12 @@
                         }
                         grab = false;
                         let nx = head.x + BLOCK_SIZE * shiftX[dir];
-                        if (nx < 0) { nx = 800 - BLOCK_SIZE/2; }
-                        else if (nx > 800) { nx = BLOCK_SIZE/2; }
+                        if (nx < 0) { nx = SCREEN_WIDTH - BLOCK_SIZE/2; }
+                        else if (nx > SCREEN_WIDTH) { nx = BLOCK_SIZE/2; }
 
                         let ny = head.y + BLOCK_SIZE * shiftY[dir];
-                        if (ny < 0) { ny = 600 - BLOCK_SIZE/2; }
-                        else if (ny > 600) { ny = BLOCK_SIZE/2; }
+                        if (ny < 0) { ny = SCREEN_HEIGHT - BLOCK_SIZE/2; }
+                        else if (ny > SCREEN_HEIGHT) { ny = BLOCK_SIZE/2; }
 
                         createBlock(this, 
                                     nx, 
